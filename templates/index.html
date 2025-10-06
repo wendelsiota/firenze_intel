@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predição de Preços Airbnb - Florença, Itália</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #c41e3a 0%, #ff6b35 50%, #f7931e 100%);
+            color: white;
+            padding: 3rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+        .form-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 2rem 0;
+        }
+        .result-card {
+            background: linear-gradient(135deg, #c41e3a 0%, #ff6b35 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-top: 2rem;
+            box-shadow: 0 10px 30px rgba(196, 30, 58, 0.3);
+        }
+        .loading {
+            display: none;
+        }
+        .feature-group {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-left: 4px solid #c41e3a;
+        }
+        .btn-predict {
+            background: linear-gradient(135deg, #c41e3a 0%, #ff6b35 100%);
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border-radius: 30px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-predict:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(196, 30, 58, 0.4);
+            background: linear-gradient(135deg, #a0172a 0%, #e55a2b 100%);
+        }
+        .map-container {
+            height: 400px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        }
+        .italian-flag {
+            background: linear-gradient(90deg, #009246 33%, #ffffff 33%, #ffffff 66%, #ce2b37 66%);
+            height: 4px;
+            border-radius: 2px;
+            margin: 1rem 0;
+        }
+        .florence-badge {
+            background: linear-gradient(135deg, #c41e3a 0%, #ff6b35 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+        .coordinate-display {
+            background: #f8f9fa;
+            border: 2px solid #c41e3a;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+            text-align: center;
+        }
+        .coordinate-value {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #c41e3a;
+        }
+        .italian-pattern {
+            background-image: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(196, 30, 58, 0.03) 10px,
+                rgba(196, 30, 58, 0.03) 20px
+            );
+        }
+        
+        /* Estilos para o mapa */
+        .custom-marker {
+            background: none !important;
+            border: none !important;
+        }
+        
+        .landmark-marker {
+            background: none !important;
+            border: none !important;
+        }
+        
+        .leaflet-popup-content {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+        }
+        
+        .leaflet-control-zoom {
+            border-radius: 8px !important;
+            overflow: hidden;
+        }
+        
+        .leaflet-control-zoom a {
+            background-color: #c41e3a !important;
+            color: white !important;
+            border: none !important;
+        }
+        
+        .leaflet-control-zoom a:hover {
+            background-color: #a0172a !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 mx-auto text-center hero-content">
+                    <div class="florence-badge">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        Florença, Itália
+                    </div>
+                    <h1 class="display-4 fw-bold mb-4">
+                        <i class="fas fa-home me-3"></i>
+                        Predição de Preços Airbnb
+                    </h1>
+                    <p class="lead mb-4">
+                        Descubra o preço ideal para sua propriedade no Airbnb em Florença. 
+                        Nosso modelo de machine learning analisa as características 
+                        únicas da sua propriedade para fornecer uma estimativa precisa.
+                    </p>
+                    <div class="italian-flag"></div>
+                    <p class="small opacity-75">
+                        <i class="fas fa-brain me-2"></i>
+                        Powered by XGBoost Machine Learning
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Section -->
+    <div class="form-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <form id="predictionForm">
+                        <!-- Características Básicas -->
+                        <div class="feature-group">
+                            <h4 class="mb-3">
+                                <i class="fas fa-bed text-primary me-2"></i>
+                                <i class="fas fa-home text-primary me-2"></i>
+                                Características Básicas
+                            </h4>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="accommodates" class="form-label">Número de Hóspedes</label>
+                                    <input type="number" class="form-control" id="accommodates" name="accommodates" 
+                                           min="1" max="16" value="2" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="bedrooms" class="form-label">Número de Quartos</label>
+                                    <input type="number" class="form-control" id="bedrooms" name="bedrooms" 
+                                           min="0" max="10" value="1" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="bathrooms" class="form-label">Número de Banheiros</label>
+                                    <input type="number" class="form-control" id="bathrooms" name="bathrooms" 
+                                           min="0" max="10" step="0.5" value="1" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="beds" class="form-label">Número de Camas</label>
+                                    <input type="number" class="form-control" id="beds" name="beds" 
+                                           min="1" max="20" value="1" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tipo de Propriedade -->
+                        <div class="feature-group">
+                            <h4 class="mb-3">
+                                <i class="fas fa-building text-primary me-2"></i>
+                                <i class="fas fa-flag text-primary me-2"></i>
+                                Tipo de Propriedade
+                            </h4>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="room_type" class="form-label">Tipo de Quarto</label>
+                                    <select class="form-select" id="room_type" name="room_type" required>
+                                        <option value="Entire home/apt">Casa/Apartamento Inteiro</option>
+                                        <option value="Private room">Quarto Privado</option>
+                                        <option value="Shared room">Quarto Compartilhado</option>
+                                        <option value="Hotel room">Quarto de Hotel</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="property_type" class="form-label">Tipo de Propriedade</label>
+                                    <select class="form-select" id="property_type" name="property_type" required>
+                                        <option value="Apartment">Apartamento</option>
+                                        <option value="House">Casa</option>
+                                        <option value="Condominium">Condomínio</option>
+                                        <option value="Townhouse">Casa Geminada</option>
+                                        <option value="Loft">Loft</option>
+                                        <option value="Villa">Villa</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Localização -->
+                        <div class="feature-group">
+                            <h4 class="mb-3">
+                                <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                                <i class="fas fa-university text-primary me-2"></i>
+                                Localização em Florença
+                            </h4>
+                            <p class="text-muted mb-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Clique no mapa para selecionar a localização exata da sua propriedade em Florença
+                            </p>
+                            
+                            <!-- Mapa Interativo -->
+                            <div class="map-container" id="map"></div>
+                            
+                            <!-- Coordenadas Selecionadas -->
+                            <div class="coordinate-display">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Latitude:</label>
+                                        <div class="coordinate-value" id="selected-lat">43.7696</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Longitude:</label>
+                                        <div class="coordinate-value" id="selected-lng">11.2558</div>
+                                    </div>
+                                </div>
+                                <small class="text-muted mt-2 d-block">
+                                    <i class="fas fa-map-pin me-1"></i>
+                                    Centro de Florença (Duomo) - Clique para alterar
+                                </small>
+                            </div>
+                            
+                            <!-- Campos ocultos para o formulário -->
+                            <input type="hidden" id="latitude" name="latitude" value="43.7696">
+                            <input type="hidden" id="longitude" name="longitude" value="11.2558">
+                        </div>
+
+                        <!-- Avaliações e Disponibilidade -->
+                        <div class="feature-group">
+                            <h4 class="mb-3">
+                                <i class="fas fa-star text-primary me-2"></i>
+                                <i class="fas fa-thumbs-up text-primary me-2"></i>
+                                Avaliações e Disponibilidade
+                            </h4>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="number_of_reviews" class="form-label">Número de Avaliações</label>
+                                    <input type="number" class="form-control" id="number_of_reviews" name="number_of_reviews" 
+                                           min="0" max="1000" value="10" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="reviews_per_month" class="form-label">Avaliações por Mês</label>
+                                    <input type="number" class="form-control" id="reviews_per_month" name="reviews_per_month" 
+                                           min="0" max="10" step="0.1" value="1.5" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="review_scores_rating" class="form-label">Nota Média</label>
+                                    <input type="number" class="form-control" id="review_scores_rating" name="review_scores_rating" 
+                                           min="0" max="5" step="0.1" value="4.5" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="availability_365" class="form-label">Disponibilidade no Ano</label>
+                                    <input type="number" class="form-control" id="availability_365" name="availability_365" 
+                                           min="0" max="365" value="200" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Políticas de Reserva -->
+                        <div class="feature-group">
+                            <h4 class="mb-3">
+                                <i class="fas fa-calendar text-primary me-2"></i>
+                                <i class="fas fa-clock text-primary me-2"></i>
+                                Políticas de Reserva
+                            </h4>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="minimum_nights" class="form-label">Noites Mínimas</label>
+                                    <input type="number" class="form-control" id="minimum_nights" name="minimum_nights" 
+                                           min="1" max="30" value="1" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="maximum_nights" class="form-label">Noites Máximas</label>
+                                    <input type="number" class="form-control" id="maximum_nights" name="maximum_nights" 
+                                           min="1" max="365" value="30" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botão de Predição -->
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-predict text-white btn-lg">
+                                <i class="fas fa-calculator me-2"></i>
+                                <i class="fas fa-euro-sign me-2"></i>
+                                Prever Preço
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Loading -->
+                    <div class="loading text-center mt-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2">Processando predição...</p>
+                    </div>
+
+                    <!-- Resultado -->
+                    <div id="result" class="result-card" style="display: none;">
+                        <h3 class="mb-3">
+                            <i class="fas fa-euro-sign me-2"></i>
+                            Resultado da Predição
+                        </h3>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h4 id="predicted-price" class="display-6 fw-bold">€0.00</h4>
+                                <p class="mb-0">Preço predito por noite</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-end">
+                                    <small class="opacity-75">Intervalo de confiança (95%)</small>
+                                    <div class="fw-bold">
+                                        €<span id="confidence-lower">0.00</span> - €<span id="confidence-upper">0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <hr class="my-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="opacity-75">
+                                    <i class="fas fa-brain me-1"></i>
+                                    Modelo: XGBoost
+                                </small>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <small class="opacity-75">
+                                    <i class="fas fa-chart-line me-1"></i>
+                                    Precisão: R² = 0.54
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4 mt-5 italian-pattern">
+        <div class="container text-center">
+            <div class="italian-flag mb-3"></div>
+            <p class="mb-2">
+                <i class="fas fa-robot me-2"></i>
+                <i class="fas fa-brain me-2"></i>
+                Powered by Machine Learning - Modelo XGBoost
+            </p>
+            <p class="small opacity-75 mb-0">
+                <i class="fas fa-map-marker-alt me-2"></i>
+                <i class="fas fa-university me-2"></i>
+                <i class="fas fa-flag me-2"></i>
+                Especializado para Florença, Itália
+            </p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Variáveis globais para o mapa
+        let map;
+        let marker;
+        let selectedLat = 43.7696; // Centro de Florença (Duomo)
+        let selectedLng = 11.2558;
+
+        // Inicializar mapa quando a página carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMap();
+        });
+
+        function initializeMap() {
+            // Configurar mapa centrado em Florença
+            map = L.map('map').setView([selectedLat, selectedLng], 13);
+            
+            // Adicionar tiles do OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18
+            }).addTo(map);
+            
+            // Adicionar marcador inicial no centro de Florença
+            marker = L.marker([selectedLat, selectedLng], {
+                draggable: true,
+                icon: L.divIcon({
+                    className: 'custom-marker',
+                    html: '<i class="fas fa-map-pin" style="color: #c41e3a; font-size: 24px;"></i>',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 24]
+                })
+            }).addTo(map);
+            
+            // Evento de clique no mapa
+            map.on('click', function(e) {
+                updateLocation(e.latlng.lat, e.latlng.lng);
+            });
+            
+            // Evento de arrastar marcador
+            marker.on('dragend', function(e) {
+                const latlng = e.target.getLatLng();
+                updateLocation(latlng.lat, latlng.lng);
+            });
+            
+            // Adicionar controles de zoom
+            L.control.zoom({
+                position: 'topright'
+            }).addTo(map);
+            
+            // Adicionar marcadores de pontos de interesse em Florença
+            addFlorenceLandmarks();
+        }
+
+        function updateLocation(lat, lng) {
+            selectedLat = lat;
+            selectedLng = lng;
+            
+            // Atualizar marcador
+            marker.setLatLng([lat, lng]);
+            
+            // Atualizar campos do formulário
+            document.getElementById('latitude').value = lat;
+            document.getElementById('longitude').value = lng;
+            
+            // Atualizar display das coordenadas
+            document.getElementById('selected-lat').textContent = lat.toFixed(6);
+            document.getElementById('selected-lng').textContent = lng.toFixed(6);
+            
+            // Centralizar mapa na nova localização
+            map.setView([lat, lng], map.getZoom());
+        }
+
+        function addFlorenceLandmarks() {
+            // Pontos de interesse em Florença
+            const landmarks = [
+                {name: "Duomo", lat: 43.7731, lng: 11.2560, icon: "church", description: "Catedral de Santa Maria del Fiore"},
+                {name: "Ponte Vecchio", lat: 43.7679, lng: 11.2529, icon: "bridge", description: "Ponte medieval sobre o Arno"},
+                {name: "Palazzo Vecchio", lat: 43.7692, lng: 11.2558, icon: "building", description: "Palácio da Signoria"},
+                {name: "Uffizi", lat: 43.7684, lng: 11.2553, icon: "museum", description: "Galeria dos Uffizi"},
+                {name: "Santa Maria Novella", lat: 43.7744, lng: 11.2494, icon: "church", description: "Basílica dominicana"}
+            ];
+            
+            landmarks.forEach(landmark => {
+                const iconClass = landmark.icon === 'church' ? 'fas fa-church' : 
+                                 landmark.icon === 'bridge' ? 'fas fa-bridge' :
+                                 landmark.icon === 'building' ? 'fas fa-building' :
+                                 landmark.icon === 'museum' ? 'fas fa-university' : 'fas fa-map-marker';
+                
+                L.marker([landmark.lat, landmark.lng], {
+                    icon: L.divIcon({
+                        className: 'landmark-marker',
+                        html: `<i class="${iconClass}" style="color: #ff6b35; font-size: 16px;"></i>`,
+                        iconSize: [16, 16],
+                        iconAnchor: [8, 16]
+                    })
+                }).addTo(map).bindPopup(`
+                    <div style="text-align: center;">
+                        <strong>${landmark.name}</strong><br>
+                        <small>${landmark.description}</small><br>
+                        <i class="fas fa-flag" style="color: #c41e3a;"></i> 
+                        <small>Ponto de referência em Florença</small>
+                    </div>
+                `);
+            });
+        }
+
+        // Event listener para o formulário
+        document.getElementById('predictionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Mostrar loading
+            document.querySelector('.loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+            
+            try {
+                // Coletar dados do formulário
+                const formData = new FormData(this);
+                const data = Object.fromEntries(formData.entries());
+                
+                // Converter números
+                const numericFields = ['accommodates', 'bedrooms', 'bathrooms', 'beds', 
+                                     'number_of_reviews', 'reviews_per_month', 'review_scores_rating',
+                                     'minimum_nights', 'maximum_nights', 'availability_365', 
+                                     'latitude', 'longitude'];
+                
+                numericFields.forEach(field => {
+                    if (data[field]) {
+                        data[field] = parseFloat(data[field]);
+                    }
+                });
+                
+                // Fazer requisição
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Mostrar resultado
+                    document.getElementById('predicted-price').textContent = '€' + result.predicted_price.toFixed(2);
+                    document.getElementById('confidence-lower').textContent = '€' + result.confidence_interval.lower.toFixed(2);
+                    document.getElementById('confidence-upper').textContent = '€' + result.confidence_interval.upper.toFixed(2);
+                    document.getElementById('result').style.display = 'block';
+                } else {
+                    alert('Erro: ' + result.error);
+                }
+                
+            } catch (error) {
+                alert('Erro na requisição: ' + error.message);
+            } finally {
+                // Esconder loading
+                document.querySelector('.loading').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
