@@ -185,19 +185,6 @@ O modelo foi desenvolvido baseado em análise exploratória que revelou:
 - **Impacto significativo** do tipo de quarto no preço
 - **Necessidade de transformação logarítmica** para melhor ajuste
 
-## 🚀 Deploy em Produção
-
-Para deploy em produção, considere:
-
-1. **Usar Gunicorn** como servidor WSGI:
-```bash
-gunicorn -w 4 -b 0.0.0.0:5000 app:app
-```
-
-2. **Configurar variáveis de ambiente** para configurações
-3. **Implementar logging** adequado
-4. **Adicionar monitoramento** de performance
-5. **Configurar HTTPS** para segurança
 
 ## 📝 Notas Importantes
 
