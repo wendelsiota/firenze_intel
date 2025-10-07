@@ -18,6 +18,17 @@ Esta aplicação web utiliza um modelo de machine learning (XGBoost) para prever
 
 ## 🚀 Como Usar
 
+### 0. Download e Ambiente
+Clone o repositorio e ative um ambiente virtual em sua estação de trabalho
+
+```bash
+git clone https://github.com/wendelsiota/firenze_intel.git
+cd firenze_inte
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+
 ### 1. Instalação das Dependências
 
 ```bash
