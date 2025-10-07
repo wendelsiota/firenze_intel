@@ -1,6 +1,7 @@
 # 🏠 Predição de Preços Airbnb - Aplicação Web
 
 Esta aplicação web utiliza um modelo de machine learning (XGBoost) para prever preços de propriedades no Airbnb baseado em características específicas. O modelo foi desenvolvido através de análise exploratória de dados e modelagem em notebooks Jupyter.
+Dados usados para treino dispomniveis em https://data.insideairbnb.com/italy/toscana/florence/2025-06-19/data/listings.csv.gz com data de 19 de Junho de 2025
 
 ## 📊 Sobre o Modelo
 
